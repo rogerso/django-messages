@@ -3,7 +3,7 @@ from django import forms
 from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import ugettext_noop
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 
 if "notification" in settings.INSTALLED_APPS:
     from notification import models as notification
@@ -35,7 +35,15 @@ class ComposeForm(forms.Form):
         subject = self.cleaned_data['subject']
         body = self.cleaned_data['body']
         message_list = []
+        final_recipients = set()
         for r in recipients:
+            if isinstance(r, User):
+                final_recipients.add(r)
+            elif isinstance(r, Group):
+                [final_recipients.add(u) for u in r.user_set.all()]
+            else:
+                raise NotImplementedError
+        for r in final_recipients:
             msg = Message(
                 sender = sender,
                 recipient = r,
